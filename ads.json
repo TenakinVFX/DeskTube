@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "banner": {
+    "id": "banner_001",
+    "sponsor_name": "YourSponsor",
+    "tagline": "Short sponsor tagline here",
+    "cta": "Learn More",
+    "url": "https://yoursponsor.com",
+    "bg_color": "#1A2A3A",
+    "accent_color": "#3366CC",
+    "text_color": "#DDDDDD"
+  }
+}
