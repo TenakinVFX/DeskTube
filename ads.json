@@ -2,10 +2,10 @@
   "enabled": false,
   "banner": {
     "id": "banner_001",
-    "sponsor_name": "YourSponsor",
-    "tagline": "Short sponsor tagline here",
+    "sponsor_name": "DeskLabs Hub",
+    "tagline": "Apps and resources in one place",
     "cta": "Learn More",
-    "url": "https://yoursponsor.com",
+    "url": "https://desklabs.carrd.co/",
     "bg_color": "#1A2A3A",
     "accent_color": "#3366CC",
     "text_color": "#DDDDDD"
