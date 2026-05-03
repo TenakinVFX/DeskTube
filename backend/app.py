@@ -9,13 +9,9 @@ app = Flask(__name__)
 CORS(app)
 
 def get_cookie_file():
-    import glob
-    paths = glob.glob('/etc/secrets/*')
-    print(f"DEBUG secret files: {paths}", flush=True)
-    path = '/etc/secrets/cookies.txt'
-    print(f"DEBUG cookie path exists: {os.path.exists(path)}", flush=True)
-    if os.path.exists(path):
-        return path
+    for path in ['/etc/secrets/cookies.txt', '/opt/render/secrets/cookies.txt', '/run/secrets/cookies.txt']:
+        if os.path.exists(path):
+            return path
     return None
 def sanitize_filename(name):
     return re.sub(r'[^\w\s-]', '', name).strip()
