@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeskTube</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --border: #222222;
+      --border-bright: #333333;
+      --accent: #e8ff3c;
+      --accent-dim: rgba(232, 255, 60, 0.12);
+      --text: #f0f0f0;
+      --muted: #666666;
+      --danger: #ff4444;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.08em;
+      color: var(--text);
+    }
+    .logo span { color: var(--accent); }
+
+    .tagline {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 4rem 2rem 6rem;
+    }
+
+    .headline {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(52px, 10vw, 96px);
+      line-height: 0.9;
+      letter-spacing: 0.02em;
+      margin-bottom: 2.5rem;
+    }
+    .headline em {
+      font-style: normal;
+      color: var(--accent);
+      display: block;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border-bright);
+      background: var(--surface);
+      margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+    .input-group:focus-within { border-color: var(--accent); }
+
+    #url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 14px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      caret-color: var(--accent);
+    }
+    #url-input::placeholder { color: var(--muted); }
+
+    #fetch-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 14px 24px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    #fetch-btn:hover { opacity: 0.88; }
+    #fetch-btn:active { transform: scale(0.98); }
+    #fetch-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .status-line {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      min-height: 18px;
+      margin-bottom: 2rem;
+    }
+    .status-line.error { color: var(--danger); }
+    .status-line.ok { color: var(--accent); }
+
+    /* Video card */
+    #video-card {
+      display: none;
+      border: 1px solid var(--border-bright);
+      background: var(--surface);
+      overflow: hidden;
+      animation: fadeUp 0.3s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .video-thumb-wrap {
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #000;
+      overflow: hidden;
+    }
+    .video-thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.85;
+    }
+    .video-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+    }
+    .video-duration {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.85);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      padding: 3px 8px;
+      color: var(--text);
+    }
+
+    .video-meta {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .video-title {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+    .video-uploader {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Format picker */
+    .formats-section {
+      padding: 1.25rem 1.5rem;
+    }
+    .formats-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    .formats-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+    .format-btn {
+      background: transparent;
+      border: 1px solid var(--border-bright);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .format-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .format-btn.selected {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    #download-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 16px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    #download-btn:hover { opacity: 0.88; }
+    #download-btn:active { transform: scale(0.99); }
+    #download-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .dl-arrow {
+      font-size: 20px;
+      transition: transform 0.2s;
+    }
+    #download-btn:not(:disabled):hover .dl-arrow { transform: translateY(3px); }
+
+    /* Progress bar */
+    #progress-wrap {
+      display: none;
+      height: 3px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.3s;
+    }
+    #progress-wrap.active { display: block; }
+    #progress-wrap.indeterminate #progress-bar {
+      animation: indeterminate 1.4s ease infinite;
+      width: 40%;
+    }
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-text {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .footer-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Desk<span>Tube</span></div>
+  <div class="tagline">// youtube downloader</div>
+</header>
+
+<main>
+  <h1 class="headline">
+    Download<br>
+    <em>anything.</em>
+  </h1>
+
+  <div class="input-group">
+    <input type="text" id="url-input" placeholder="paste youtube url here..." autocomplete="off" spellcheck="false" />
+    <button id="fetch-btn" onclick="fetchInfo()">Fetch</button>
+  </div>
+  <div class="status-line" id="status">_</div>
+
+  <div id="video-card">
+    <div class="video-thumb-wrap">
+      <img id="thumb" src="" alt="" />
+      <div class="video-overlay"></div>
+      <div class="video-duration" id="duration"></div>
+    </div>
+    <div class="video-meta">
+      <div class="video-title" id="vtitle"></div>
+      <div class="video-uploader" id="uploader"></div>
+    </div>
+    <div class="formats-section">
+      <div class="formats-label">Select format</div>
+      <div class="formats-grid" id="formats-grid"></div>
+      <div id="progress-wrap"><div id="progress-bar"></div></div>
+      <button id="download-btn" onclick="startDownload()" disabled>
+        <span>Download</span>
+        <span class="dl-arrow">↓</span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span class="footer-text"><span class="footer-dot"></span>powered by yt-dlp</span>
+  <span class="footer-text">desktube</span>
+</footer>
+
+<script>
+  // ← REPLACE THIS with your Render backend URL after deploying
+  const API_BASE = 'https://your-desktube-api.onrender.com';
+
+  let selectedFormat = null;
+  let currentUrl = '';
+  let videoInfo = null;
+
+  function setStatus(msg, type = '') {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status-line' + (type ? ' ' + type : '');
+  }
+
+  function formatDuration(secs) {
+    if (!secs) return '';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function selectFormat(btn, formatId) {
+    document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedFormat = formatId;
+    document.getElementById('download-btn').disabled = false;
+  }
+
+  async function fetchInfo() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) { setStatus('paste a url first.', 'error'); return; }
+
+    currentUrl = url;
+    const btn = document.getElementById('fetch-btn');
+    btn.disabled = true;
+    btn.textContent = '...';
+    setStatus('fetching video info...');
+    document.getElementById('video-card').style.display = 'none';
+    selectedFormat = null;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+
+      if (data.error) { setStatus(`error: ${data.error}`, 'error'); return; }
+
+      videoInfo = data;
+      document.getElementById('thumb').src = data.thumbnail || '';
+      document.getElementById('vtitle').textContent = data.title || '';
+      document.getElementById('uploader').textContent = data.uploader || '';
+      document.getElementById('duration').textContent = formatDuration(data.duration);
+
+      const grid = document.getElementById('formats-grid');
+      grid.innerHTML = '';
+      (data.formats || []).forEach(f => {
+        const b = document.createElement('button');
+        b.className = 'format-btn';
+        b.textContent = f.resolution;
+        b.onclick = () => selectFormat(b, f.format_id);
+        grid.appendChild(b);
+      });
+
+      document.getElementById('download-btn').disabled = true;
+      document.getElementById('video-card').style.display = 'block';
+      setStatus('select a format below ↓', 'ok');
+
+    } catch (e) {
+      setStatus(`connection error — is the backend awake? (${e.message})`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Fetch';
+    }
+  }
+
+  async function startDownload() {
+    if (!selectedFormat) return;
+
+    const dlBtn = document.getElementById('download-btn');
+    const progress = document.getElementById('progress-wrap');
+
+    dlBtn.disabled = true;
+    dlBtn.querySelector('span').textContent = 'Downloading...';
+    progress.className = 'active indeterminate';
+    setStatus('downloading — this may take a minute...', 'ok');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: currentUrl, format_id: selectedFormat })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        setStatus(`download failed: ${err.error}`, 'error');
+        return;
+      }
+
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : 'video.mp4';
+
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      setStatus('download complete ✓', 'ok');
+    } catch (e) {
+      setStatus(`error: ${e.message}`, 'error');
+    } finally {
+      dlBtn.disabled = false;
+      dlBtn.querySelector('span').textContent = 'Download';
+      progress.className = '';
+    }
+  }
+
+  document.getElementById('url-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchInfo();
+  });
+</script>
+</body>
+</html>
