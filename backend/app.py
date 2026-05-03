@@ -56,9 +56,7 @@ def get_info():
             })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        if cookie_file and os.path.exists(cookie_file):
-            os.unlink(cookie_file)
+
 
 
 @app.route('/api/download', methods=['POST'])
