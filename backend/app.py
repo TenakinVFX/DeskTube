@@ -1,16 +1,21 @@
 import os
 import re
-import subprocess
 import tempfile
-import threading
-from flask import Flask, request, jsonify, send_file, after_this_request
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import yt_dlp
 
 app = Flask(__name__)
 CORS(app)
 
-DOWNLOAD_DIR = tempfile.mkdtemp()
+def get_cookie_file():
+    cookies = os.environ.get('YOUTUBE_COOKIES')
+    if not cookies:
+        return None
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+    tmp.write(cookies)
+    tmp.close()
+    return tmp.name
 
 def sanitize_filename(name):
     return re.sub(r'[^\w\s-]', '', name).strip()
@@ -22,7 +27,11 @@ def get_info():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
+    cookie_file = get_cookie_file()
     ydl_opts = {'quiet': True, 'no_warnings': True}
+    if cookie_file:
+        ydl_opts['cookiefile'] = cookie_file
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -39,8 +48,6 @@ def get_info():
                             'ext': f.get('ext', 'mp4'),
                         })
             formats.sort(key=lambda x: int(x['resolution'][:-1]), reverse=True)
-
-            # Also add audio-only
             formats.append({'format_id': 'bestaudio', 'resolution': 'Audio only (mp3)', 'ext': 'mp3'})
 
             return jsonify({
@@ -52,6 +59,9 @@ def get_info():
             })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if cookie_file and os.path.exists(cookie_file):
+            os.unlink(cookie_file)
 
 
 @app.route('/api/download', methods=['POST'])
@@ -62,6 +72,8 @@ def download():
 
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
+
+    cookie_file = get_cookie_file()
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -79,6 +91,9 @@ def download():
                     'merge_output_format': 'mp4',
                     'quiet': True,
                 }
+
+            if cookie_file:
+                ydl_opts['cookiefile'] = cookie_file
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -100,6 +115,9 @@ def download():
             )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if cookie_file and os.path.exists(cookie_file):
+            os.unlink(cookie_file)
 
 
 @app.route('/api/health', methods=['GET'])
