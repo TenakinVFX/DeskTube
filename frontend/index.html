@@ -5,6 +5,722 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DeskTube</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:       #0d0d0d;
+      --bg-base:       #111111;
+      --glass-bg:      rgba(255,255,255,0.04);
+      --glass-hover:   rgba(255,255,255,0.07);
+      --glass-border:  rgba(255,255,255,0.08);
+      --glass-border-bright: rgba(255,255,255,0.14);
+      --red:           #cc2222;
+      --red-glow:      rgba(204,34,34,0.55);
+      --red-dim:       rgba(204,34,34,0.15);
+      --text:          #e8e8e8;
+      --text-secondary:#999999;
+      --text-muted:    #555555;
+      --accent-line:   rgba(204,34,34,0.4);
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg-deep);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      overflow-x: hidden;
+    }
+
+    /* Background grid pattern */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Red vignette top */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+      z-index: 100;
+    }
+
+    /* ---- TITLE BAR ---- */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 48px;
+      background: rgba(13,13,13,0.9);
+      border-bottom: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+
+    .logo-icon svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--red);
+    }
+
+    .logo-text {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text);
+    }
+
+    .logo-text span { color: var(--red); }
+
+    .header-right {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ---- MAIN ---- */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    /* ---- GLASS PANEL ---- */
+    .panel {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 6px;
+      backdrop-filter: blur(16px);
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%, rgba(0,0,0,0.1) 100%);
+      pointer-events: none;
+    }
+
+    .panel-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .panel-body { padding: 16px; }
+
+    /* ---- URL INPUT ---- */
+    .url-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .url-input-wrap {
+      flex: 1;
+      position: relative;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .url-input-wrap:focus-within {
+      border-color: rgba(204,34,34,0.5);
+      box-shadow: 0 0 0 1px rgba(204,34,34,0.2), inset 0 0 20px rgba(204,34,34,0.04);
+    }
+
+    /* Light refraction overlay */
+    .url-input-wrap::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 40%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.04), transparent);
+      pointer-events: none;
+      border-radius: 3px 3px 0 0;
+    }
+
+    #url-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 11px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text);
+      caret-color: var(--red);
+    }
+
+    #url-input::placeholder { color: var(--text-muted); }
+
+    #fetch-btn {
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      color: var(--text);
+      padding: 0 20px;
+      border-radius: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #fetch-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+    }
+
+    #fetch-btn:hover {
+      background: rgba(204,34,34,0.28);
+      box-shadow: 0 0 16px var(--red-glow);
+    }
+
+    #fetch-btn:active { transform: scale(0.98); }
+    #fetch-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+    /* ---- STATUS ---- */
+    .status-line {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 8px 0 0;
+      min-height: 24px;
+      letter-spacing: 0.03em;
+    }
+
+    .status-line.ok  { color: #4a9a5a; }
+    .status-line.err { color: #cc4444; }
+
+    /* ---- VIDEO CARD ---- */
+    #video-card { display: none; }
+    #video-card.visible { display: block; animation: slideIn 0.25s ease; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .thumb-wrap {
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.75;
+      transition: opacity 0.3s;
+    }
+
+    .thumb-wrap:hover img { opacity: 0.9; }
+
+    /* Glass overlay on thumb */
+    .thumb-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        transparent 40%,
+        rgba(0,0,0,0.7) 100%
+      );
+    }
+
+    .thumb-duration {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      z-index: 2;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(8px);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 2px 8px;
+      color: var(--text);
+      border-radius: 2px;
+    }
+
+    /* Accent line on left of video info */
+    .video-info {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--glass-border);
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .video-info::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 3px;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red-glow);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .video-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.35;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .video-uploader {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* ---- FORMATS ---- */
+    .formats-body { padding: 14px 16px; }
+
+    .formats-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .formats-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .fmt-btn {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fmt-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.04), transparent);
+    }
+
+    .fmt-btn:hover {
+      border-color: rgba(204,34,34,0.4);
+      color: var(--text);
+      background: rgba(204,34,34,0.08);
+    }
+
+    .fmt-btn.selected {
+      background: var(--red-dim);
+      border-color: var(--red);
+      color: var(--text);
+      box-shadow: 0 0 10px rgba(204,34,34,0.3);
+    }
+
+    /* ---- DOWNLOAD BUTTON ---- */
+    #download-btn {
+      width: 100%;
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #download-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+    }
+
+    #download-btn:not(:disabled):hover {
+      background: rgba(204,34,34,0.28);
+      box-shadow: 0 0 24px var(--red-glow);
+    }
+
+    #download-btn:active { transform: scale(0.995); }
+
+    #download-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .dl-icon { font-size: 16px; transition: transform 0.2s; }
+    #download-btn:not(:disabled):hover .dl-icon { transform: translateY(2px); }
+
+    /* ---- PROGRESS ---- */
+    .progress-wrap {
+      height: 2px;
+      background: rgba(255,255,255,0.06);
+      margin-bottom: 14px;
+      border-radius: 1px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress-wrap.active { display: block; }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red-glow);
+      border-radius: 1px;
+      transition: width 0.3s;
+    }
+
+    .progress-wrap.indeterminate .progress-bar {
+      width: 35%;
+      animation: sweep 1.4s ease infinite;
+    }
+
+    @keyframes sweep {
+      0%   { transform: translateX(-120%); }
+      100% { transform: translateX(380%); }
+    }
+
+    /* ---- FOOTER ---- */
+    footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 36px;
+      background: rgba(13,13,13,0.95);
+      border-top: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 10;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 5px; height: 5px;
+      background: var(--red);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--red-glow);
+      animation: blink 2.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.25; }
+    }
+
+    .footer-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ---- DIVIDER ---- */
+    .divider {
+      height: 1px;
+      background: var(--glass-border);
+      margin: 0 16px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16"><path d="M2 3h12v10H2zM6 6l5 2.5L6 11z"/></svg>
+    </div>
+    <div class="logo-text">Desk<span>Tube</span></div>
+  </div>
+  <div class="header-right">v1.0.0 // web</div>
+</header>
+
+<main>
+
+  <!-- URL INPUT PANEL -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label">video url</span>
+    </div>
+    <div class="panel-body">
+      <div class="url-row">
+        <div class="url-input-wrap">
+          <input type="text" id="url-input" placeholder="paste youtube url..." autocomplete="off" spellcheck="false" />
+        </div>
+        <button id="fetch-btn" onclick="fetchInfo()">Fetch</button>
+      </div>
+      <div class="status-line" id="status">ready</div>
+    </div>
+  </div>
+
+  <!-- VIDEO CARD -->
+  <div class="panel" id="video-card">
+    <div class="thumb-wrap">
+      <img id="thumb" src="" alt="" />
+      <div class="thumb-duration" id="duration"></div>
+    </div>
+
+    <div class="video-info">
+      <div class="video-title" id="vtitle"></div>
+      <div class="video-uploader" id="uploader"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="formats-body">
+      <div class="formats-label">select format</div>
+      <div class="formats-grid" id="formats-grid"></div>
+
+      <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+
+      <button id="download-btn" onclick="startDownload()" disabled>
+        <span class="dl-icon">↓</span>
+        <span>Download</span>
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-left">
+    <div class="status-dot"></div>
+    <span class="footer-mono">yt-dlp backend</span>
+  </div>
+  <span class="footer-mono">DeskLabs © 2025</span>
+</footer>
+
+<script>
+  // ← Replace with your Render URL
+  const API_BASE = 'https://desktube-api.onrender.com';
+
+  let selectedFormat = null;
+  let currentUrl = '';
+
+  function setStatus(msg, type = '') {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status-line' + (type ? ' ' + type : '');
+  }
+
+  function formatDuration(secs) {
+    if (!secs) return '';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function selectFormat(btn, formatId) {
+    document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedFormat = formatId;
+    document.getElementById('download-btn').disabled = false;
+  }
+
+  async function fetchInfo() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) { setStatus('paste a url first', 'err'); return; }
+
+    currentUrl = url;
+    const btn = document.getElementById('fetch-btn');
+    btn.disabled = true;
+    btn.textContent = '...';
+    setStatus('fetching...');
+    document.getElementById('video-card').classList.remove('visible');
+    selectedFormat = null;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (data.error) { setStatus(`error: ${data.error}`, 'err'); return; }
+
+      document.getElementById('thumb').src = data.thumbnail || '';
+      document.getElementById('vtitle').textContent = data.title || '';
+      document.getElementById('uploader').textContent = data.uploader || '';
+      document.getElementById('duration').textContent = formatDuration(data.duration);
+
+      const grid = document.getElementById('formats-grid');
+      grid.innerHTML = '';
+      (data.formats || []).forEach(f => {
+        const b = document.createElement('button');
+        b.className = 'fmt-btn';
+        b.textContent = f.resolution;
+        b.onclick = () => selectFormat(b, f.format_id);
+        grid.appendChild(b);
+      });
+
+      document.getElementById('download-btn').disabled = true;
+      document.getElementById('video-card').classList.add('visible');
+      setStatus('select a format ↓', 'ok');
+
+    } catch (e) {
+      setStatus(`connection error — backend may be waking up (${e.message})`, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Fetch';
+    }
+  }
+
+  async function startDownload() {
+    if (!selectedFormat) return;
+
+    const dlBtn = document.getElementById('download-btn');
+    const pw = document.getElementById('progress-wrap');
+
+    dlBtn.disabled = true;
+    dlBtn.querySelector('span:last-child').textContent = 'Downloading...';
+    pw.className = 'progress-wrap active indeterminate';
+    setStatus('downloading — this may take a minute...', 'ok');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: currentUrl, format_id: selectedFormat })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        setStatus(`download failed: ${err.error}`, 'err');
+        return;
+      }
+
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : 'video.mp4';
+
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      setStatus('download complete ✓', 'ok');
+    } catch (e) {
+      setStatus(`error: ${e.message}`, 'err');
+    } finally {
+      dlBtn.disabled = false;
+      dlBtn.querySelector('span:last-child').textContent = 'Download';
+      pw.className = 'progress-wrap';
+    }
+  }
+
+  document.getElementById('url-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchInfo();
+  });
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeskTube</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
