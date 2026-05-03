@@ -9,13 +9,10 @@ app = Flask(__name__)
 CORS(app)
 
 def get_cookie_file():
-    cookies = os.environ.get('YOUTUBE_COOKIES')
-    if not cookies:
-        return None
-    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
-    tmp.write(cookies)
-    tmp.close()
-    return tmp.name
+    path = '/etc/secrets/cookies.txt'
+    if os.path.exists(path):
+        return path
+    return None
 
 def sanitize_filename(name):
     return re.sub(r'[^\w\s-]', '', name).strip()
@@ -115,9 +112,7 @@ def download():
             )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        if cookie_file and os.path.exists(cookie_file):
-            os.unlink(cookie_file)
+
 
 
 @app.route('/api/health', methods=['GET'])
